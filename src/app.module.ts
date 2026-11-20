@@ -1,0 +1,61 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { Restaurant } from './entities/restaurant.entity';
+import { Branch } from './entities/branch.entity';
+import { RestaurantTable } from './entities/restaurant-table.entity';
+import { QrCode } from './entities/qr-code.entity';
+import { MenuCategory } from './entities/menu-category.entity';
+import { MenuItem } from './entities/menu-item.entity';
+import { AssistRequest } from './entities/assist-request.entity';
+import { AssistRequests1700000000002 } from './migrations/1700000000002-assist-requests';
+import { Phase2Design1700000000003 } from './migrations/1700000000003-phase2-design';
+import { RestaurantSettings } from './entities/restaurant-settings.entity';
+import { User } from './entities/user.entity';
+import { CustomerSession } from './entities/customer-session.entity';
+import { RequestNotification } from './entities/request-notification.entity';
+import { RequestStatusHistory } from './entities/request-status-history.entity';
+import { HealthController } from './controllers/health.controller';
+import { AssistService } from './services/assist.service';
+import { AssistPublicController } from './controllers/assist-public.controller';
+import { RequestsController } from './controllers/requests.controller';
+import { InitSchema1700000000000 } from './migrations/1700000000000-init-schema';
+import { MenuSchema1700000000001 } from './migrations/1700000000001-menu-schema';
+import { MenuService } from './services/menu.service';
+import { MenuController } from './controllers/menu.controller';
+import { CustomerPageController } from './controllers/customer-page.controller';
+import { RestaurantsService } from './services/restaurants.service';
+import { BranchesService } from './services/branches.service';
+import { TablesService } from './services/tables.service';
+import { AdminGuard } from './common/admin.guard';
+import { RestaurantGuard } from './common/restaurant.guard';
+import { RestaurantsController } from './controllers/restaurants.controller';
+import { AdminController } from './controllers/admin.controller';
+import { BranchesController } from './controllers/branches.controller';
+import { TablesController } from './controllers/tables.controller';
+import { PublicController } from './controllers/public.controller';
+
+const entities = [Restaurant, Branch, RestaurantTable, QrCode, MenuCategory, MenuItem, AssistRequest,
+  RestaurantSettings, User, CustomerSession, RequestNotification, RequestStatusHistory];
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 30 }]),
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (cfg: ConfigService) => ({
+        type: 'postgres' as const,
+        url: cfg.get<string>('DATABASE_URL') ?? 'postgres://attend:attend@localhost:5432/attend',
+        entities,
+      migrations: [InitSchema1700000000000, MenuSchema1700000000001, AssistRequests1700000000002, Phase2Design1700000000003],
+        migrationsRun: true,
+        synchronize: false,
+      }),
+    }),
+    TypeOrmModule.forFeature(entities),
+  ],
+ controllers: [RestaurantsController, AdminController, BranchesController, TablesController, PublicController, MenuController, CustomerPageController, AssistPublicController, RequestsController, HealthController],
+  providers: [AssistService, MenuService, RestaurantsService, BranchesService, TablesService, AdminGuard, RestaurantGuard],
+})
+export class AppModule {}
