@@ -3,6 +3,9 @@ import { IsEmail, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class
 export class RegisterRestaurantDto {
   @IsString() @MinLength(2) @MaxLength(120) name: string;
   @IsEmail() email: string;
+  // Optional: when a password is sent, an owner login (email + password) is created too.
+  @IsOptional() @IsString() @MinLength(2) @MaxLength(120) ownerName?: string;
+  @IsOptional() @IsString() @MinLength(8) @MaxLength(100) password?: string;
 }
 
 export class CreateBranchDto {

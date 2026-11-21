@@ -1,16 +1,18 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Res, StreamableFile, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, Res, StreamableFile, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { CurrentRestaurant, RestaurantGuard } from '../common/restaurant.guard';
+import { Roles } from '../common/roles.decorator';
 import { Restaurant } from '../entities/restaurant.entity';
 import { TablesService } from '../services/tables.service';
 import { CreateTableDto, FormatQueryDto } from '../dto/dtos';
+import { UpdateTableDto } from '../dto/manage.dto';
 
 @Controller()
 @UseGuards(RestaurantGuard)
 export class TablesController {
   constructor(private svc: TablesService) {}
 
-  @Post('branches/:branchId/tables')
+  @Post('branches/:branchId/tables') @Roles('owner', 'manager')
   create(@CurrentRestaurant() r: Restaurant, @Param('branchId', ParseUUIDPipe) branchId: string, @Body() dto: CreateTableDto) {
     return this.svc.createTable(r.id, branchId, dto.tableNumber);
   }
@@ -20,7 +22,12 @@ export class TablesController {
     return this.svc.listTables(r.id, branchId);
   }
 
-  @Post('tables/:tableId/qr/regenerate')
+  @Patch('tables/:tableId') @Roles('owner', 'manager')
+  update(@CurrentRestaurant() r: Restaurant, @Param('tableId', ParseUUIDPipe) tableId: string, @Body() dto: UpdateTableDto) {
+    return this.svc.updateTable(r.id, tableId, dto);
+  }
+
+  @Post('tables/:tableId/qr/regenerate') @Roles('owner', 'manager')
   async regenerate(
     @CurrentRestaurant() r: Restaurant,
     @Param('tableId', ParseUUIDPipe) tableId: string,

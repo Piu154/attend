@@ -7,7 +7,7 @@ import { RestaurantTable } from '../entities/restaurant-table.entity';
 import { QrCode } from '../entities/qr-code.entity';
 import { isUniqueViolation, randomToken, sha256 } from '../common/crypto';
 import { BranchesService } from './branches.service';
-
+import { UpdateTableDto } from '../dto/manage.dto';
 @Injectable()
 export class TablesService {
   constructor(
@@ -53,7 +53,18 @@ export class TablesService {
     await this.branches.getOwned(restaurantId, branchId);
     return this.tables.find({ where: { branchId }, order: { tableNumber: 'ASC' } });
   }
-
+  async updateTable(restaurantId: string, tableId: string, dto: UpdateTableDto) {
+    const t = await this.getOwnedTable(restaurantId, tableId);
+    if (dto.tableNumber !== undefined) t.tableNumber = dto.tableNumber.trim();
+    if (dto.isActive !== undefined) t.isActive = dto.isActive;
+    try {
+      const saved = await this.tables.save(t);
+      return { id: saved.id, branchId: saved.branchId, tableNumber: saved.tableNumber, isActive: saved.isActive };
+    } catch (e) {
+      if (isUniqueViolation(e)) throw new ConflictException('Table number already exists in this branch');
+      throw e;
+    }
+  }
   private async getOwnedTable(restaurantId: string, tableId: string) {
     const t = await this.tables.findOne({ where: { id: tableId }, relations: { branch: true } });
     if (!t || t.branch.restaurantId !== restaurantId) throw new NotFoundException('Table not found');
@@ -81,7 +92,7 @@ export class TablesService {
       where: { tokenHash: sha256(token), active: true },
       relations: { table: { branch: { restaurant: true } } },
     });
-    if (!qr || qr.table.branch.restaurant.status !== 'approved') throw new NotFoundException('Invalid or expired QR');
+   if (!qr || !qr.table.isActive || qr.table.branch.restaurant.status !== 'approved') throw new NotFoundException('Invalid or expired QR');
     const { table } = qr;
     return {
       restaurant: { id: table.branch.restaurant.id, name: table.branch.restaurant.name },

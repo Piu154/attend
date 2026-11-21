@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { JwtModule } from '@nestjs/jwt';
 import { Restaurant } from './entities/restaurant.entity';
 import { Branch } from './entities/branch.entity';
 import { RestaurantTable } from './entities/restaurant-table.entity';
@@ -17,6 +18,8 @@ import { CustomerSession } from './entities/customer-session.entity';
 import { RequestNotification } from './entities/request-notification.entity';
 import { RequestStatusHistory } from './entities/request-status-history.entity';
 import { HealthController } from './controllers/health.controller';
+import { AuthService } from './services/auth.service';
+import { AuthController } from './controllers/auth.controller';
 import { AssistService } from './services/assist.service';
 import { AssistPublicController } from './controllers/assist-public.controller';
 import { RequestsController } from './controllers/requests.controller';
@@ -42,6 +45,15 @@ const entities = [Restaurant, Branch, RestaurantTable, QrCode, MenuCategory, Men
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 30 }]),
+        JwtModule.registerAsync({
+      global: true,
+      inject: [ConfigService],
+      useFactory: (cfg: ConfigService) => {
+        const secret = cfg.get<string>('JWT_SECRET');
+        if (!secret || secret.length < 32) throw new Error('JWT_SECRET is missing or shorter than 32 characters (see .env)');
+        return { secret, signOptions: { expiresIn: '12h' } };
+      },
+    }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => ({
@@ -53,6 +65,7 @@ const entities = [Restaurant, Branch, RestaurantTable, QrCode, MenuCategory, Men
         synchronize: false,
       }),
     }),
+    
     TypeOrmModule.forFeature(entities),
   ],
  controllers: [RestaurantsController, AdminController, BranchesController, TablesController, PublicController, MenuController, CustomerPageController, AssistPublicController, RequestsController, HealthController],
