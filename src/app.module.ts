@@ -38,14 +38,15 @@ import { AdminController } from './controllers/admin.controller';
 import { BranchesController } from './controllers/branches.controller';
 import { TablesController } from './controllers/tables.controller';
 import { PublicController } from './controllers/public.controller';
-
+import { RootController } from './controllers/root.controller';
 const entities = [Restaurant, Branch, RestaurantTable, QrCode, MenuCategory, MenuItem, AssistRequest,
   RestaurantSettings, User, CustomerSession, RequestNotification, RequestStatusHistory];
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 30 }]),
-        JwtModule.registerAsync({
+    JwtModule.registerAsync({
       global: true,
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => {
@@ -60,15 +61,14 @@ const entities = [Restaurant, Branch, RestaurantTable, QrCode, MenuCategory, Men
         type: 'postgres' as const,
         url: cfg.get<string>('DATABASE_URL') ?? 'postgres://attend:attend@localhost:5432/attend',
         entities,
-      migrations: [InitSchema1700000000000, MenuSchema1700000000001, AssistRequests1700000000002, Phase2Design1700000000003],
+        migrations: [InitSchema1700000000000, MenuSchema1700000000001, AssistRequests1700000000002, Phase2Design1700000000003],
         migrationsRun: true,
         synchronize: false,
       }),
     }),
-    
     TypeOrmModule.forFeature(entities),
   ],
- controllers: [RestaurantsController, AdminController, BranchesController, TablesController, PublicController, MenuController, CustomerPageController, AssistPublicController, RequestsController, HealthController],
-  providers: [AssistService, MenuService, RestaurantsService, BranchesService, TablesService, AdminGuard, RestaurantGuard],
+  controllers: [RestaurantsController, AdminController, RootController,BranchesController, TablesController, PublicController, MenuController, CustomerPageController, AssistPublicController, RequestsController, HealthController, AuthController],
+  providers: [AuthService, AssistService, MenuService, RestaurantsService, BranchesService, TablesService, AdminGuard, RestaurantGuard],
 })
 export class AppModule {}

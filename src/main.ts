@@ -6,7 +6,12 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // /t/<token> (the page customers open after scanning) lives outside /api
-  app.setGlobalPrefix('api', { exclude: [{ path: 't/:token', method: RequestMethod.GET }] });
+app.setGlobalPrefix('api', {
+  exclude: [
+    { path: '', method: RequestMethod.GET },
+    { path: 't/:token', method: RequestMethod.GET }
+  ]
+});
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   const port = Number(process.env.PORT) || 3000;
