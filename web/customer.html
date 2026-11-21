@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATTEND</title>
+<style>
+:root{--red:#d32f2f;--dark:#b71c1c;--soft:#fdecea;--ink:#212121;--mu:#6b6b6b;--ln:#e0e0e0}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.bar{background:var(--red);color:#fff;padding:14px 16px;text-align:center}
+.bar b{letter-spacing:.14em;font-size:20px}.bar span{display:block;font-size:13px;opacity:.92}
+.w{max-width:460px;margin:0 auto;padding:18px 16px 48px}
+h1{font-size:28px;line-height:1.15;margin:8px 0}h2{font-size:17px;margin:24px 0 8px}
+.mu{color:var(--mu)}.small{font-size:13px}
+.pill{display:inline-block;margin-top:12px;padding:6px 12px;border-radius:99px;background:var(--soft);color:var(--dark);font-size:14px;font-weight:600}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.o{text-align:left;font:inherit;color:var(--ink);background:#fff;border:1.5px solid var(--ln);border-radius:12px;padding:14px;min-height:82px;cursor:pointer}
+.o b{display:block}.o span{color:var(--mu);font-size:13px}
+.o[aria-checked=true]{border-color:var(--red);background:var(--soft);box-shadow:inset 0 0 0 1px var(--red)}
+textarea{width:100%;font:inherit;color:var(--ink);background:#fff;border:1px solid var(--ln);border-radius:10px;padding:10px;min-height:80px}
+.b{width:100%;font:600 16px system-ui,sans-serif;border:0;border-radius:12px;padding:15px;margin-top:16px;cursor:pointer;background:var(--red);color:#fff}
+.b:disabled{opacity:.4;cursor:not-allowed}
+.b.gh{background:#fff;color:var(--red);border:1.5px solid var(--red)}
+.t{border:1.5px solid var(--red);border-radius:14px;padding:16px;margin-top:16px}
+.id{font-size:30px;font-weight:800;letter-spacing:.08em;color:var(--red)}
+.bd{display:inline-block;padding:3px 10px;border-radius:99px;font-size:13px;font-weight:700}
+.s-pending{background:var(--soft);color:var(--dark)}.s-approved{background:var(--red);color:#fff}
+.s-completed,.s-rejected,.s-expired{background:#eee;color:#424242}
+.err{background:var(--soft);color:var(--dark);border-radius:8px;padding:8px 10px;margin-top:12px;font-size:14px}
+:focus-visible{outline:3px solid var(--dark);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="bar"><b>ATTEND</b><span>Assistance, made simple.</span></div>
+<div class="w"><div id="app"><p class="mu">Loading…</p></div></div>
+<script>
+var TYPES=[['staff','Call staff','Get someone’s attention'],['supplies','Water / Supplies','Request an item'],['bill','Request bill','Ask for your bill'],['other','Other assistance','Something else']];
+var token=location.pathname.split('/')[2];
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+var info=null,cur=null,skew=0,dismissed=null,type=null,details='',err='',pollT=null;
+
+async function call(path,method,body){
+  var r=await fetch('/api/public/qr/'+token+path,{method:method||'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  var j=await r.json().catch(function(){return {}});
+  if(!r.ok){var e=new Error(Array.isArray(j.message)?j.message.join(', '):(j.message||'Something went wrong'));e.status=r.status;e.data=j;throw e}
+  return j;
+}
+function isOpen(){return cur&&(cur.status==='pending'||cur.status==='approved')}
+
+async function load(){
+  try{
+    var j=await call('/requests/current');
+    skew=Date.parse(j.serverTime)-Date.now();
+    cur=(j.request&&j.request.id!==dismissed)?j.request:null;
+    err='';
+  }catch(e){err='Connection problem. Retrying…'}
+  render();
+  clearTimeout(pollT);
+  if(isOpen())pollT=setTimeout(load,3000);
+}
+
+async function init(){
+  try{info=await call('')}
+  catch(e){$('app').innerHTML='<h1>QR not valid</h1><p class="mu">This QR code is invalid or has expired. Please ask the staff for help.</p>';return}
+  load();
+  setInterval(countdown,1000);
+}
+
+function countdown(){
+  var b=$('rem');
+  if(!b||!cur||!cur.remindAvailableAt)return;
+  var s=Math.ceil((Date.parse(cur.remindAvailableAt)-(Date.now()+skew))/1000);
+  b.disabled=s>0;
+  b.textContent=s>0?'Remind staff in '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):'Remind staff';
+}
+
+function render(){
+  var pill='<div class="pill">Table '+esc(info.table.number)+' · '+esc(info.branch.name)+' · '+esc(info.restaurant.name)+'</div>';
+  var e=err?'<div class="err" role="alert">'+esc(err)+'</div>':'';
+  if(!cur){
+    $('app').innerHTML='<h1>Need a hand?</h1><p class="mu">Request assistance without having to call out or wait to get someone’s attention.</p>'+pill+
+    '<h2>What do you need help with?</h2><div class="g" role="radiogroup">'+TYPES.map(function(t){
+      return '<button class="o" role="radio" aria-checked="'+(type===t[0])+'" onclick="pick(\''+t[0]+'\')"><b>'+t[1]+'</b><span>'+t[2]+'</span></button>'}).join('')+'</div>'+
+    '<h2>Additional details <span class="mu" style="font-weight:400">(optional)</span></h2><textarea id="d" maxlength="300">'+esc(details)+'</textarea>'+e+
+    '<button class="b" onclick="send()" '+(type?'':'disabled')+'>Request assistance</button>'+
+    '<p class="mu small" style="text-align:center">No app installation required · Free to request</p>';
+    return;
+  }
+  var s=cur.status,name=TYPES.filter(function(t){return t[0]===cur.type})[0];name=name?name[1]:cur.type;
+  var titles={pending:'Request sent',approved:'Help is on the way',rejected:'Request declined',completed:'All done',expired:'Request closed'};
+  var msgs={pending:'Staff have been notified. Nobody here yet? You can remind them below.',
+    approved:'Staff accepted your request. Confirm below once you have been helped.',
+    rejected:cur.rejectReason?esc(cur.rejectReason):'Staff could not take this request.',
+    completed:'Thanks for confirming.',expired:'This request was closed automatically.'};
+  var act=s==='pending'?'<button class="b gh" id="rem" onclick="remind()">Remind staff</button>'
+    :s==='approved'?'<button class="b" onclick="done()">Mark as completed</button>'
+    :'<button class="b gh" onclick="again()">'+(s==='rejected'?'Request again':'Make another request')+'</button>';
+  $('app').innerHTML='<h1>'+titles[s]+'</h1><p class="mu" role="status" aria-live="polite">'+msgs[s]+'</p>'+pill+
+    '<div class="t"><div class="mu small">Request ID</div><div class="id">'+esc(cur.id.slice(0,6).toUpperCase())+'</div>'+
+    '<p style="margin:10px 0 0"><span class="bd s-'+s+'">'+(s==='pending'?'Waiting':s.charAt(0).toUpperCase()+s.slice(1))+'</span> '+esc(name)+(cur.reminders?' · reminded ×'+cur.reminders:'')+'</p>'+
+    (cur.details?'<p class="mu" style="margin:6px 0 0">'+esc(cur.details)+'</p>':'')+'</div>'+e+act;
+  countdown();
+}
+
+function pick(k){var d=$('d');if(d)details=d.value;type=k;render()}
+async function run(fn){try{err='';await fn()}catch(e){err=(e.data&&e.data.retryAfterSeconds)?'Please wait '+e.data.retryAfterSeconds+'s before reminding again.':e.message}load()}
+function send(){run(async function(){details=$('d').value;await call('/requests','POST',{type:type,details:details});type=null;details=''})}
+function remind(){run(function(){return call('/requests/'+cur.id+'/remind','POST')})}
+function done(){run(function(){return call('/requests/'+cur.id+'/complete','POST')})}
+function again(){dismissed=cur.id;cur=null;type=null;details='';render()}
+init();
+</script>
+</body>
+</html>

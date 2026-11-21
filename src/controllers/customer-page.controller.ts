@@ -1,28 +1,18 @@
-import { Controller, Get, Header, NotFoundException, Param, Res, UseGuards } from '@nestjs/common';
-import { ThrottlerGuard } from '@nestjs/throttler';
-import type { Response } from 'express';
-import { TablesService } from '../services/tables.service';
-import { MenuService } from '../services/menu.service';
-import { renderMenuPage, renderNotFoundPage } from '../common/render-page';
+import { Controller, Get, Header } from '@nestjs/common';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
-/** The page a customer lands on after scanning the QR: /t/<token> */
+/**
+ * The page a customer lands on after scanning a table QR: http://<host>/t/<token>
+ * It is the assistance request screen (web/customer.html), not a menu.
+ * The page itself calls /api/public/qr/<token>/... to find the table and send requests.
+ */
 @Controller('t')
-@UseGuards(ThrottlerGuard)
 export class CustomerPageController {
-  constructor(private tables: TablesService, private menu: MenuService) {}
-
   @Get(':token')
   @Header('Content-Type', 'text/html; charset=utf-8')
-  async page(@Param('token') token: string, @Res({ passthrough: true }) res: Response) {
-    try {
-      const info = await this.tables.resolveToken(token);
-      return renderMenuPage(info, await this.menu.fullMenu(info.restaurant.id, true));
-    } catch (e) {
-      if (e instanceof NotFoundException) {
-        res.status(404);
-        return renderNotFoundPage();
-      }
-      throw e;
-    }
+  @Header('Cache-Control', 'no-store')
+  page() {
+    return readFileSync(join(process.cwd(), 'web', 'customer.html'), 'utf8');
   }
 }
