@@ -12,6 +12,7 @@ import { MenuItem } from './entities/menu-item.entity';
 import { AssistRequest } from './entities/assist-request.entity';
 import { AssistRequests1700000000002 } from './migrations/1700000000002-assist-requests';
 import { Phase2Design1700000000003 } from './migrations/1700000000003-phase2-design';
+import { RequestBell1700000000004 } from './migrations/1700000000004-request-bell';
 import { RestaurantSettings } from './entities/restaurant-settings.entity';
 import { User } from './entities/user.entity';
 import { CustomerSession } from './entities/customer-session.entity';
@@ -61,7 +62,7 @@ const entities = [Restaurant, Branch, RestaurantTable, QrCode, MenuCategory, Men
         type: 'postgres' as const,
         url: cfg.get<string>('DATABASE_URL') ?? 'postgres://attend:attend@localhost:5432/attend',
         entities,
-        migrations: [InitSchema1700000000000, MenuSchema1700000000001, AssistRequests1700000000002, Phase2Design1700000000003],
+       migrations: [InitSchema1700000000000, MenuSchema1700000000001, AssistRequests1700000000002, Phase2Design1700000000003, RequestBell1700000000004],
         migrationsRun: true,
         synchronize: false,
       }),

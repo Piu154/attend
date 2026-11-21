@@ -15,7 +15,8 @@ export class RequestsController {
 
   @Patch(':id/approve')
   approve(@CurrentRestaurant() r: Restaurant, @Param('id', ParseUUIDPipe) id: string) { return this.svc.approve(r.id, id); }
-
+  @Patch(':id/bell')
+  bell(@CurrentRestaurant() r: Restaurant, @Param('id', ParseUUIDPipe) id: string) { return this.svc.bell(r.id, id); }
   @Patch(':id/reject')
   reject(@CurrentRestaurant() r: Restaurant, @Param('id', ParseUUIDPipe) id: string, @Body() dto: RejectRequestDto) {
     return this.svc.reject(r.id, id, dto.reason);

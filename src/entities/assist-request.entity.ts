@@ -29,6 +29,7 @@ export class AssistRequest {
   @Column({ type: 'uuid', nullable: true }) acceptedBy: string | null;
   @Column({ type: 'int', default: 0 }) reminders: number;
   @Column({ type: 'timestamptz', nullable: true }) remindedAt: Date | null;
+    @Column({ type: 'timestamptz', nullable: true }) bellAt: Date | null;
   @Column({ type: 'timestamptz', nullable: true }) approvedAt: Date | null;
   @Column({ type: 'timestamptz', nullable: true }) closedAt: Date | null;
   @Column({ type: 'varchar', nullable: true }) rejectReason: string | null;

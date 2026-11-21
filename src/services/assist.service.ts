@@ -26,7 +26,10 @@ export class AssistService implements OnModuleInit, OnModuleDestroy {
     const n = Number(this.cfg.get(key));
     return Number.isFinite(n) && n > 0 ? n : fallback;
   }
-  private get cooldownMs() { return this.num('REMIND_COOLDOWN_SECONDS', 120) * 1000; }
+  // how long a customer must wait before they can resend a request (default 5 minutes)
+  private get cooldownMs() { return this.num('REMIND_COOLDOWN_SECONDS', 300) * 1000; }
+  // after this long without an answer, staff see the request as OVERDUE (default 5 minutes)
+  private get overdueSeconds() { return this.num('REQUEST_OVERDUE_SECONDS', 300); }
 
   // ---- auto-close sweep: nothing stays open forever ----
   onModuleInit() {
@@ -53,7 +56,8 @@ export class AssistService implements OnModuleInit, OnModuleDestroy {
     const last = (r.remindedAt ?? r.createdAt).getTime();
     return {
       id: r.id, type: r.type, details: r.details, status: r.status, reminders: r.reminders,
-      rejectReason: r.rejectReason, createdAt: iso(r.createdAt), approvedAt: iso(r.approvedAt), closedAt: iso(r.closedAt),
+      rejectReason: r.rejectReason, bellAt: iso(r.bellAt), createdAt: iso(r.createdAt),
+      approvedAt: iso(r.approvedAt), closedAt: iso(r.closedAt),
       remindAvailableAt: r.status === 'pending' ? new Date(last + this.cooldownMs).toISOString() : null,
     };
   }
@@ -63,8 +67,9 @@ export class AssistService implements OnModuleInit, OnModuleDestroy {
       branch: { id: r.branchId, name: r.branch?.branchName },
       table: { id: r.tableId, number: r.table?.tableNumber },
       type: r.type, details: r.details, status: r.status, reminders: r.reminders,
-      remindedAt: iso(r.remindedAt), createdAt: iso(r.createdAt), approvedAt: iso(r.approvedAt),
-      closedAt: iso(r.closedAt), closedBy: r.closedBy, rejectReason: r.rejectReason,
+      remindedAt: iso(r.remindedAt), bellAt: iso(r.bellAt), createdAt: iso(r.createdAt),
+      overdue: r.status === 'pending' && Date.now() - r.createdAt.getTime() > this.overdueSeconds * 1000,
+      approvedAt: iso(r.approvedAt), closedAt: iso(r.closedAt), closedBy: r.closedBy, rejectReason: r.rejectReason,
     };
   }
 
@@ -116,6 +121,7 @@ export class AssistService implements OnModuleInit, OnModuleDestroy {
     }
     r.reminders += 1;
     r.remindedAt = new Date();
+    r.bellAt = null; // resending starts a fresh round, so the old bell no longer counts
     return { request: this.customerView(await this.repo.save(r)) };
   }
 
@@ -139,7 +145,7 @@ export class AssistService implements OnModuleInit, OnModuleDestroy {
       (Number(!!b.remindedAt) - Number(!!a.remindedAt)) ||
       (a.remindedAt && b.remindedAt ? b.remindedAt.getTime() - a.remindedAt.getTime() : a.createdAt.getTime() - b.createdAt.getTime()));
     const inProgress = rows.filter((r) => r.status === 'approved').sort((a, b) => a.approvedAt!.getTime() - b.approvedAt!.getTime());
-    return { serverTime: new Date().toISOString(), needsAction: needsAction.map((r) => this.staffView(r)), inProgress: inProgress.map((r) => this.staffView(r)) };
+    return { serverTime: new Date().toISOString(), overdueAfterSeconds: this.overdueSeconds, needsAction: needsAction.map((r) => this.staffView(r)), inProgress: inProgress.map((r) => this.staffView(r)) };
   }
 
   async history(restaurantId: string, branchId?: string) {
@@ -160,6 +166,10 @@ export class AssistService implements OnModuleInit, OnModuleDestroy {
     return this.staffView(await this.repo.findOneOrFail({ where: { id }, relations: { table: true, branch: true } }));
   }
 
+  /** Staff tell the customer "someone will attend to you soon". The request stays pending. */
+  bell(restaurantId: string, id: string) {
+    return this.transition(restaurantId, id, 'pending', { bellAt: new Date() });
+  }
   approve(restaurantId: string, id: string) {
     return this.transition(restaurantId, id, 'pending', { status: 'approved', approvedAt: new Date() });
   }

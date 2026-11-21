@@ -27,6 +27,8 @@ textarea{width:100%;font:inherit;color:var(--ink);background:#fff;border:1px sol
 .bd{display:inline-block;padding:3px 10px;border-radius:99px;font-size:13px;font-weight:700}
 .s-pending{background:var(--soft);color:var(--dark)}.s-approved{background:var(--red);color:#fff}
 .s-completed,.s-rejected,.s-expired{background:#eee;color:#424242}
+.bell{background:var(--red);color:#fff;border-radius:12px;padding:14px 16px;margin-top:16px;font-weight:700}
+.bell small{display:block;font-weight:400;font-size:14px;margin-top:2px;opacity:.95}
 .err{background:var(--soft);color:var(--dark);border-radius:8px;padding:8px 10px;margin-top:12px;font-size:14px}
 :focus-visible{outline:3px solid var(--dark);outline-offset:2px}
 </style>
@@ -39,7 +41,7 @@ var TYPES=[['staff','Call staff','Get someone’s attention'],['supplies','Water
 var token=location.pathname.split('/')[2];
 function $(id){return document.getElementById(id)}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-var info=null,cur=null,skew=0,dismissed=null,type=null,details='',err='',pollT=null;
+var info=null,cur=null,skew=0,dismissed=null,type=null,details='',err='',pollT=null,bellSeen=null;
 
 async function call(path,method,body){
   var r=await fetch('/api/public/qr/'+token+path,{method:method||'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
@@ -55,6 +57,7 @@ async function load(){
     skew=Date.parse(j.serverTime)-Date.now();
     cur=(j.request&&j.request.id!==dismissed)?j.request:null;
     err='';
+    if(cur&&cur.bellAt&&cur.bellAt!==bellSeen){bellSeen=cur.bellAt;notify()}
   }catch(e){err='Connection problem. Retrying…'}
   render();
   clearTimeout(pollT);
@@ -68,12 +71,17 @@ async function init(){
   setInterval(countdown,1000);
 }
 
+function notify(){
+  try{if(navigator.vibrate)navigator.vibrate([200,100,200])}catch(e){}
+  try{var c=new (window.AudioContext||window.webkitAudioContext)(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=880;g.gain.value=.1;o.start();setTimeout(function(){o.stop();c.close()},250)}catch(e){}
+}
+
 function countdown(){
   var b=$('rem');
   if(!b||!cur||!cur.remindAvailableAt)return;
   var s=Math.ceil((Date.parse(cur.remindAvailableAt)-(Date.now()+skew))/1000);
   b.disabled=s>0;
-  b.textContent=s>0?'Remind staff in '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):'Remind staff';
+  b.textContent=s>0?'You can resend in '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):'Still waiting? Resend request';
 }
 
 function render(){
@@ -90,22 +98,23 @@ function render(){
   }
   var s=cur.status,name=TYPES.filter(function(t){return t[0]===cur.type})[0];name=name?name[1]:cur.type;
   var titles={pending:'Request sent',approved:'Help is on the way',rejected:'Request declined',completed:'All done',expired:'Request closed'};
-  var msgs={pending:'Staff have been notified. Nobody here yet? You can remind them below.',
+  var msgs={pending:cur.bellAt?'Staff know you are waiting.':'Staff have been notified. If nobody comes in a few minutes, you can resend your request.',
     approved:'Staff accepted your request. Confirm below once you have been helped.',
     rejected:cur.rejectReason?esc(cur.rejectReason):'Staff could not take this request.',
     completed:'Thanks for confirming.',expired:'This request was closed automatically.'};
-  var act=s==='pending'?'<button class="b gh" id="rem" onclick="remind()">Remind staff</button>'
+  var bell=(s==='pending'&&cur.bellAt)?'<div class="bell" role="status">🔔 Someone will attend to you shortly.<small>Thank you for your patience.</small></div>':'';
+  var act=s==='pending'?'<button class="b gh" id="rem" onclick="remind()">Resend request</button>'
     :s==='approved'?'<button class="b" onclick="done()">Mark as completed</button>'
     :'<button class="b gh" onclick="again()">'+(s==='rejected'?'Request again':'Make another request')+'</button>';
-  $('app').innerHTML='<h1>'+titles[s]+'</h1><p class="mu" role="status" aria-live="polite">'+msgs[s]+'</p>'+pill+
+  $('app').innerHTML='<h1>'+titles[s]+'</h1><p class="mu" role="status" aria-live="polite">'+msgs[s]+'</p>'+pill+bell+
     '<div class="t"><div class="mu small">Request ID</div><div class="id">'+esc(cur.id.slice(0,6).toUpperCase())+'</div>'+
-    '<p style="margin:10px 0 0"><span class="bd s-'+s+'">'+(s==='pending'?'Waiting':s.charAt(0).toUpperCase()+s.slice(1))+'</span> '+esc(name)+(cur.reminders?' · reminded ×'+cur.reminders:'')+'</p>'+
+    '<p style="margin:10px 0 0"><span class="bd s-'+s+'">'+(s==='pending'?'Waiting':s.charAt(0).toUpperCase()+s.slice(1))+'</span> '+esc(name)+(cur.reminders?' · resent ×'+cur.reminders:'')+'</p>'+
     (cur.details?'<p class="mu" style="margin:6px 0 0">'+esc(cur.details)+'</p>':'')+'</div>'+e+act;
   countdown();
 }
 
 function pick(k){var d=$('d');if(d)details=d.value;type=k;render()}
-async function run(fn){try{err='';await fn()}catch(e){err=(e.data&&e.data.retryAfterSeconds)?'Please wait '+e.data.retryAfterSeconds+'s before reminding again.':e.message}load()}
+async function run(fn){try{err='';await fn()}catch(e){err=(e.data&&e.data.retryAfterSeconds)?'Please wait '+e.data.retryAfterSeconds+'s before resending.':e.message}load()}
 function send(){run(async function(){details=$('d').value;await call('/requests','POST',{type:type,details:details});type=null;details=''})}
 function remind(){run(function(){return call('/requests/'+cur.id+'/remind','POST')})}
 function done(){run(function(){return call('/requests/'+cur.id+'/complete','POST')})}
