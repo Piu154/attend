@@ -1,12 +1,13 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
-export type UserRole = 'owner' | 'manager' | 'staff';
+export type UserRole = 'owner' | 'manager' | 'staff' | 'vendor';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column() restaurantId: string;
   @Column({ type: 'uuid', nullable: true }) branchId: string | null;
+  @Column({ type: 'uuid', nullable: true }) vendorId: string | null;
   @Column() name: string;
   @Column() email: string;
   @Column() passwordHash: string;

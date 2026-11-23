@@ -5,7 +5,9 @@ import { RestaurantTable } from './restaurant-table.entity';
 // Old values (staff, supplies, other, approved, rejected, expired) stay valid until Phase 5.
 export type RequestType =
   | 'staff' | 'supplies' | 'bill' | 'other'
-  | 'call_waiter' | 'water' | 'menu' | 'cleaning' | 'assistance';
+  | 'call_waiter' | 'water' | 'menu' | 'cleaning' | 'assistance'
+  | 'clean_table' | 'spill' | 'baby_chair' | 'extra_dip' | 'order_status';
+export type TargetType = 'STAFF' | 'HOUSEKEEPING' | 'VENDOR';
 export type RequestStatus =
   | 'pending' | 'approved' | 'rejected' | 'completed' | 'expired'
   | 'accepted' | 'in_progress' | 'cancelled';
@@ -23,6 +25,12 @@ export class AssistRequest {
   @JoinColumn({ name: 'tableId' })
   table: RestaurantTable;
   @Column({ type: 'uuid', nullable: true }) sessionId: string | null;
+    @Column({ type: 'uuid', nullable: true }) vendorId: string | null;
+  @Column({ type: 'varchar', default: 'STAFF' }) targetType: TargetType;
+  // computed by the database from targetType + vendorId, so never written by the app
+  @Column({ type: 'varchar', insert: false, update: false }) targetKey: string;
+  @Column({ type: 'smallint', default: 0 }) bellCount: number;
+  @Column({ type: 'timestamptz', nullable: true }) lastBellAt: Date | null;
   @Column({ type: 'varchar' }) type: RequestType;
   @Column({ type: 'text', nullable: true }) details: string | null;
   @Column({ type: 'varchar', default: 'pending' }) status: RequestStatus;
