@@ -12,6 +12,12 @@ import { MenuItem } from './entities/menu-item.entity';
 import { AssistRequest } from './entities/assist-request.entity';
 import { AssistRequests1700000000002 } from './migrations/1700000000002-assist-requests';
 import { Phase2Design1700000000003 } from './migrations/1700000000003-phase2-design';
+import { PlatformUpgrade1700000000005 } from './migrations/1700000000005-platform-upgrade';
+import { Vendor } from './entities/vendor.entity';
+import { ChangeRequest } from './entities/change-request.entity';
+import { AdminVenuesService } from './services/admin-venues.service';
+import { AdminVenuesController } from './controllers/admin-venues.controller';
+
 import { RequestBell1700000000004 } from './migrations/1700000000004-request-bell';
 import { RestaurantSettings } from './entities/restaurant-settings.entity';
 import { User } from './entities/user.entity';
@@ -40,6 +46,9 @@ import { BranchesController } from './controllers/branches.controller';
 import { TablesController } from './controllers/tables.controller';
 import { PublicController } from './controllers/public.controller';
 import { RootController } from './controllers/root.controller';
+import { BranchStaff1700000000006 } from './migrations/1700000000006-branch-staff';
+import { AdminStaffService } from './services/admin-staff.service';
+import { AdminStaffController } from './controllers/admin-staff.controller';
 const entities = [Restaurant, Branch, RestaurantTable, QrCode, MenuCategory, MenuItem, AssistRequest,
   RestaurantSettings, User, CustomerSession, RequestNotification, RequestStatusHistory];
 
@@ -62,14 +71,14 @@ const entities = [Restaurant, Branch, RestaurantTable, QrCode, MenuCategory, Men
         type: 'postgres' as const,
         url: cfg.get<string>('DATABASE_URL') ?? 'postgres://attend:attend@localhost:5432/attend',
         entities,
-       migrations: [InitSchema1700000000000, MenuSchema1700000000001, AssistRequests1700000000002, Phase2Design1700000000003, RequestBell1700000000004],
+       migrations: [InitSchema1700000000000, MenuSchema1700000000001, AssistRequests1700000000002, Phase2Design1700000000003, RequestBell1700000000004,PlatformUpgrade1700000000005,BranchStaff1700000000006],
         migrationsRun: true,
         synchronize: false,
       }),
     }),
     TypeOrmModule.forFeature(entities),
   ],
-  controllers: [RestaurantsController, AdminController, RootController,BranchesController, TablesController, PublicController, MenuController, CustomerPageController, AssistPublicController, RequestsController, HealthController, AuthController],
-  providers: [AuthService, AssistService, MenuService, RestaurantsService, BranchesService, TablesService, AdminGuard, RestaurantGuard],
+  controllers: [RestaurantsController, AdminController, RootController,BranchesController, TablesController, PublicController, MenuController, CustomerPageController, AssistPublicController, RequestsController, HealthController, AuthController,AdminVenuesController,AdminStaffController],
+  providers: [AdminVenuesService,AuthService, AssistService, MenuService, RestaurantsService, BranchesService, TablesService, AdminGuard, RestaurantGuard,AdminStaffService],
 })
 export class AppModule {}

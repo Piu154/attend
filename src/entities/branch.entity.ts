@@ -8,6 +8,7 @@ export class Branch {
   @ManyToOne(() => Restaurant, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'restaurantId' })
   restaurant: Restaurant;
+  @Column({ type: 'varchar', length: 80, nullable: true }) slug: string | null;
   @Column() branchName: string;
   @Column() address: string;
   @CreateDateColumn() createdAt: Date;
