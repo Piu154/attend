@@ -1,8 +1,9 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Restaurant } from '../entities/restaurant.entity';
+import { Branch } from '../entities/branch.entity';
 import { User } from '../entities/user.entity';
 import { isUniqueViolation } from '../common/crypto';
 import { hashPassword, verifyPassword } from '../common/password';
@@ -13,27 +14,36 @@ export class AuthService {
   constructor(
     @InjectRepository(User) private users: Repository<User>,
     @InjectRepository(Restaurant) private restaurants: Repository<Restaurant>,
+    @InjectRepository(Branch) private branches: Repository<Branch>,
     private jwt: JwtService,
   ) {}
 
   private userView(u: User) {
-    return { id: u.id, name: u.name, email: u.email, role: u.role, branchId: u.branchId };
+    return { id: u.id, name: u.name, email: u.email, username: u.username, role: u.role, branchId: u.branchId };
   }
   private restaurantView(r: Restaurant) {
     return { id: r.id, name: r.name, status: r.status };
   }
 
+  /** Sign in with a username (branch staff) or an email (venue login). */
   async login(dto: LoginDto) {
-    const user = await this.users.findOne({ where: { email: dto.email.toLowerCase().trim() } });
+    const id = (dto.login ?? dto.email ?? '').toLowerCase().trim();
+    if (!id) throw new BadRequestException('Enter your username or email');
+    const user = await this.users
+      .createQueryBuilder('u')
+      .where('lower(u.email) = :id OR lower(u.username) = :id', { id })
+      .getOne();
     const ok = await verifyPassword(dto.password, user?.passwordHash ?? null);
     // same message for "no such user", "wrong password" and "disabled", so nothing leaks
-    if (!user || !ok || !user.isActive) throw new UnauthorizedException('Invalid email or password');
+    if (!user || !ok || !user.isActive) throw new UnauthorizedException('Invalid username or password');
     const restaurant = await this.restaurants.findOneOrFail({ where: { id: user.restaurantId } });
+    const branch = user.branchId ? await this.branches.findOne({ where: { id: user.branchId } }) : null;
     await this.users.update(user.id, { lastLoginAt: new Date() });
-    const accessToken = await this.jwt.signAsync({ sub: user.id, rid: user.restaurantId, role: user.role });
+    const accessToken = await this.jwt.signAsync({ sub: user.id, rid: user.restaurantId, bid: user.branchId, role: user.role });
     return {
       accessToken, tokenType: 'Bearer', expiresIn: '12h',
       user: this.userView(user), restaurant: this.restaurantView(restaurant),
+      branch: branch ? { id: branch.id, name: branch.branchName } : null,
     };
   }
 

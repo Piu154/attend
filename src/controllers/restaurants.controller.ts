@@ -1,17 +1,19 @@
-import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Patch, Post, UseGuards } from '@nestjs/common';
 import { CurrentRestaurant, RestaurantGuard } from '../common/restaurant.guard';
 import { AllowPending, Roles } from '../common/roles.decorator';
 import { Restaurant } from '../entities/restaurant.entity';
 import { RestaurantsService } from '../services/restaurants.service';
-import { RegisterRestaurantDto } from '../dto/dtos';
 import { UpdateRestaurantDto } from '../dto/manage.dto';
 
 @Controller('restaurants')
 export class RestaurantsController {
   constructor(private svc: RestaurantsService) {}
 
+  // Venues are created by the platform owner (admin panel), never by themselves.
   @Post('register')
-  register(@Body() dto: RegisterRestaurantDto) { return this.svc.register(dto); }
+  register() {
+    throw new ForbiddenException('Venues are created by the platform owner. Please contact us to get started.');
+  }
 
   @Get('me')
   @UseGuards(RestaurantGuard)

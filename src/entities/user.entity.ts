@@ -9,7 +9,8 @@ export class User {
   @Column({ type: 'uuid', nullable: true }) branchId: string | null;
   @Column({ type: 'uuid', nullable: true }) vendorId: string | null;
   @Column() name: string;
-  @Column() email: string;
+  @Column({ type: 'varchar', length: 254, nullable: true }) email: string | null;
+  @Column({ type: 'varchar', length: 80, nullable: true }) username: string | null;
   @Column() passwordHash: string;
   @Column({ type: 'varchar' }) role: UserRole;
   @Column({ type: 'boolean', default: true }) isActive: boolean;
