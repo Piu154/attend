@@ -47,6 +47,8 @@ import { TablesController } from './controllers/tables.controller';
 import { PublicController } from './controllers/public.controller';
 import { RootController } from './controllers/root.controller';
 import { BranchStaff1700000000006 } from './migrations/1700000000006-branch-staff';
+import { RequestTracking1700000000007 } from './migrations/1700000000007-request-tracking';
+import { TrackController } from './controllers/track.controller';
 import { AdminStaffService } from './services/admin-staff.service';
 import { AdminStaffController } from './controllers/admin-staff.controller';
 const entities = [Restaurant, Branch, RestaurantTable, QrCode, MenuCategory, MenuItem, AssistRequest,
@@ -71,14 +73,14 @@ const entities = [Restaurant, Branch, RestaurantTable, QrCode, MenuCategory, Men
         type: 'postgres' as const,
         url: cfg.get<string>('DATABASE_URL') ?? 'postgres://attend:attend@localhost:5432/attend',
         entities,
-       migrations: [InitSchema1700000000000, MenuSchema1700000000001, AssistRequests1700000000002, Phase2Design1700000000003, RequestBell1700000000004,PlatformUpgrade1700000000005,BranchStaff1700000000006],
+       migrations: [InitSchema1700000000000, MenuSchema1700000000001, AssistRequests1700000000002, Phase2Design1700000000003, RequestBell1700000000004,PlatformUpgrade1700000000005,BranchStaff1700000000006,RequestTracking1700000000007],
         migrationsRun: true,
         synchronize: false,
       }),
     }),
     TypeOrmModule.forFeature(entities),
   ],
-  controllers: [RestaurantsController, AdminController, RootController,BranchesController, TablesController, PublicController, MenuController, CustomerPageController, AssistPublicController, RequestsController, HealthController, AuthController,AdminVenuesController,AdminStaffController],
+  controllers: [RestaurantsController, AdminController, RootController,BranchesController, TablesController, PublicController, MenuController, CustomerPageController, AssistPublicController, RequestsController, HealthController, AuthController,AdminVenuesController,AdminStaffController,TrackController],
   providers: [AdminVenuesService,AuthService, AssistService, MenuService, RestaurantsService, BranchesService, TablesService, AdminGuard, RestaurantGuard,AdminStaffService],
 })
 export class AppModule {}

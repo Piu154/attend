@@ -56,6 +56,11 @@ export class RestaurantGuard implements CanActivate {
     const allowedRoles = this.reflector.getAllAndOverride<UserRole[]>(ROLES_KEY, targets);
     if (allowedRoles && !allowedRoles.includes(role)) throw new ForbiddenException('Your role cannot do this');
 
+      const ownBranch = user?.branchId ?? null;
+    const askedBranch = req.params?.branchId;
+    if (ownBranch && askedBranch && askedBranch !== ownBranch) throw new ForbiddenException('This login belongs to another branch');
+    req.branchId = ownBranch;
+
     req.restaurant = restaurant;
     req.user = user;
     req.role = role;

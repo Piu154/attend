@@ -1,6 +1,6 @@
 import { IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
-
-export const REQUEST_TYPES = ['staff', 'supplies', 'bill', 'other'];
+import { SERVICES } from '../common/services'
+export const REQUEST_TYPES = SERVICES.map((s) => s.key);
 
 export class CreateRequestDto {
   @IsIn(REQUEST_TYPES) type: string;

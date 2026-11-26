@@ -31,6 +31,7 @@ export class AssistRequest {
   @Column({ type: 'varchar', insert: false, update: false }) targetKey: string;
   @Column({ type: 'smallint', default: 0 }) bellCount: number;
   @Column({ type: 'timestamptz', nullable: true }) lastBellAt: Date | null;
+    @Column({ type: 'varchar', nullable: true }) trackingHash: string | null;
   @Column({ type: 'varchar' }) type: RequestType;
   @Column({ type: 'text', nullable: true }) details: string | null;
   @Column({ type: 'varchar', default: 'pending' }) status: RequestStatus;

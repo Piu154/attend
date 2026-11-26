@@ -13,8 +13,8 @@ export class BranchesService {
     return this.repo.save(this.repo.create({ restaurantId, branchName: dto.branchName.trim(), address: dto.address.trim() }));
   }
 
-  list(restaurantId: string) {
-    return this.repo.find({ where: { restaurantId }, order: { createdAt: 'ASC' } });
+  list(restaurantId: string, onlyBranchId?: string) {
+    return this.repo.find({ where: { restaurantId, ...(onlyBranchId ? { id: onlyBranchId } : {}) }, order: { createdAt: 'ASC' } });
   }
 
   async getOwned(restaurantId: string, branchId: string) {

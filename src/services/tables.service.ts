@@ -8,6 +8,7 @@ import { QrCode } from '../entities/qr-code.entity';
 import { isUniqueViolation, randomToken, sha256 } from '../common/crypto';
 import { BranchesService } from './branches.service';
 import { UpdateTableDto } from '../dto/manage.dto';
+import { SERVICES } from '../common/services';
 @Injectable()
 export class TablesService {
   constructor(
@@ -98,6 +99,7 @@ export class TablesService {
       restaurant: { id: table.branch.restaurant.id, name: table.branch.restaurant.name },
       branch: { id: table.branch.id, name: table.branch.branchName, address: table.branch.address },
       table: { id: table.id, number: table.tableNumber },
+        services: SERVICES,
     };
   }
 }

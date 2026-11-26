@@ -37,7 +37,7 @@ textarea{width:100%;font:inherit;color:var(--ink);background:#fff;border:1px sol
 <div class="bar"><b>ATTEND</b><span>Assistance, made simple.</span></div>
 <div class="w"><div id="app"><p class="mu">Loading…</p></div></div>
 <script>
-var TYPES=[['staff','Call staff','Get someone’s attention'],['supplies','Water / Supplies','Request an item'],['bill','Request bill','Ask for your bill'],['other','Other assistance','Something else']];
+var TYPES=[['bill','Request Bill','Ask for your bill'],['menu','Request Menu','See the menu'],['staff','Call Staff','Get someone’s attention'],['other','Other Assistance','Something else']];
 var token=location.pathname.split('/')[2];
 function $(id){return document.getElementById(id)}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -103,7 +103,7 @@ function render(){
     rejected:cur.rejectReason?esc(cur.rejectReason):'Staff could not take this request.',
     completed:'Thanks for confirming.',expired:'This request was closed automatically.'};
   var bell=(s==='pending'&&cur.bellAt)?'<div class="bell" role="status">🔔 Someone will attend to you shortly.<small>Thank you for your patience.</small></div>':'';
-  var act=s==='pending'?'<button class="b gh" id="rem" onclick="remind()">Resend request</button>'
+   var act=s==='pending'?''
     :s==='approved'?'<button class="b" onclick="done()">Mark as completed</button>'
     :'<button class="b gh" onclick="again()">'+(s==='rejected'?'Request again':'Make another request')+'</button>';
   $('app').innerHTML='<h1>'+titles[s]+'</h1><p class="mu" role="status" aria-live="polite">'+msgs[s]+'</p>'+pill+bell+
