@@ -100,31 +100,25 @@ export class AdminVenuesService {
     return candidate;
   }
 
-  /** You onboard venues yourself: the venue is approved straight away and gets one shared login. */
+  /** You onboard venues yourself. A venue has no login of its own: access is through its branch staff logins. */
   async create(dto: CreateVenueDto) {
     this.assertPlan(dto.tenantType, dto.planTier);
-    const password = dto.password || generatePassword();
     try {
       const id = await this.ds.transaction(async (m) => {
         const r = await m.save(Restaurant, m.create(Restaurant, {
           name: dto.name.trim(), email: dto.email.toLowerCase().trim(), status: 'approved',
           tenantType: dto.tenantType as TenantType, planTier: dto.planTier as PlanTier,
-          slug: await this.uniqueSlug(m, dto.name), ownerKeyHash: sha256(randomToken()), // old key is never shown
+          slug: await this.uniqueSlug(m, dto.name), ownerKeyHash: sha256(randomToken()), // the old key is never shown
         }));
         await m.insert(RestaurantSettings, { restaurantId: r.id });
-        await m.save(User, m.create(User, {
-          restaurantId: r.id, name: 'Venue screen', email: r.email, passwordHash: await hashPassword(password), role: 'owner',
-        }));
         return r.id;
       });
-      // the password is shown ONCE, here, so you can hand it over
-      return { venue: await this.one(id), login: { email: dto.email.toLowerCase().trim(), password } };
+      return { venue: await this.one(id) };
     } catch (e) {
       if (isUniqueViolation(e)) throw new ConflictException('That email is already used by another venue');
       throw e;
     }
   }
-
   async update(id: string, dto: UpdateVenueDto) {
     const r = await this.repo.findOne({ where: { id } });
     if (!r) throw new NotFoundException('Venue not found');

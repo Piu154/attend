@@ -10,7 +10,7 @@ export class CreateVenueDto {
   @IsEmail() email: string; // the shared login of the venue
   @IsIn(TENANTS) tenantType: string;
   @IsIn(PLANS) planTier: string;
-  @IsOptional() @IsString() @MinLength(8) @MaxLength(100) password?: string; // generated when left empty
+ // generated when left empty
 }
 
 export class UpdateVenueDto {
